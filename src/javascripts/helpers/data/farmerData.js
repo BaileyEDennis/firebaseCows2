@@ -1,14 +1,32 @@
 import axios from 'axios';
 import apiKeys from '../apiKeys.json';
+import cowData from './cowData';
 
 const baseUrl = apiKeys.firebaseKeys.databaseURL;
+
+const getAllFarmers = () => new Promise((resolve, reject) => {
+  axios.get(`${baseUrl}/farmers.json`).then((response) => {
+    const demFarmers = response.data;
+    const farmers = [];
+    if (demFarmers) {
+      Object.keys(demFarmers).forEach((farmerId) => {
+        farmers.push(demFarmers[farmerId]);
+      });
+    }
+    resolve(farmers);
+  }).catch((error) => reject(error));
+});
 
 const checkIfFarmerExistsInFirebase = (farmer) => {
   axios
     .get(`${baseUrl}/farmers.json?orderBy="uid"&equalTo="${farmer.uid}"`)
     .then((resp) => {
       if (Object.values(resp.data).length === 0) {
-        axios.post(`${baseUrl}/farmers.json`, farmer);
+        axios.post(`${baseUrl}/farmers.json`, farmer)
+          .then((response) => {
+            const update = { firebaseKey: response.data.name };
+            axios.patch(`${baseUrl}/farmers/${response.data.name}.json`, update);
+          }).catch((error) => console.warn(error));
       } else {
         console.warn('User Already Exists');
       }
@@ -37,4 +55,29 @@ const setCurrentFarmer = (farmerObj) => {
   return farmer;
 };
 
-export default { setCurrentFarmer };
+const getSingleFarmer = (farmerUid) => new Promise((resolve, reject) => {
+  axios.get(`${baseUrl}/farmers.json?orderBy="uid"&equalTo="${farmerUid}"`)
+    .then((response) => {
+      const farmer = Object.values(response.data);
+      const thisFarmer = farmer[0];
+      resolve(thisFarmer);
+    }).catch((error) => reject(error));
+});
+
+const deleteFarmer = (farmerUid) => {
+  cowData.getFarmerCows(farmerUid)
+    .then((response) => {
+      response.forEach((item) => {
+        cowData.deleteCow(item.firebaseKey);
+      });
+    })
+    .then(() => {
+      getSingleFarmer(farmerUid)
+        .then((response) => {
+          axios.delete(`${baseUrl}/farmers/${response.firebaseKey}.json`);
+          console.warn(response.firebaseKey);
+        });
+    });
+};
+
+export default { setCurrentFarmer, getAllFarmers, deleteFarmer };
