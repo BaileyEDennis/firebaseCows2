@@ -44,6 +44,20 @@ const getFarmerCows = (farmerUid) => new Promise((resolve, reject) => {
     }).catch((error) => reject(error));
 });
 
+const getSingleCow = (cowFirebaseKey) => new Promise((resolve, reject) => {
+  axios.get(`${baseUrl}/Cows/${cowFirebaseKey}.json`).then((response) => {
+    const thisCow = response.data;
+    resolve((thisCow));
+  }).catch((error) => reject(error));
+});
+
+const updateCow = (firebaseKey, cowObject) => axios.patch(`${baseUrl}/Cows/${firebaseKey}.json`, cowObject);
+
 export default {
-  getCows, deleteCow, addCow, getFarmerCows
+  getCows,
+  deleteCow,
+  addCow,
+  getFarmerCows,
+  getSingleCow,
+  updateCow
 };
